@@ -1,30 +1,61 @@
+from retriever.Reranker import hybridSearch_with_rerank
+from qdrant_client import models
+
 from embedding import embeddings
-from vectorStore.qdrant import COLLECTION_NAME, get_client
+from vectorStore.qdrant import (
+    COLLECTION_NAME,
+    DENSE_VECTOR_NAME,
+    get_client,
+    get_sparse_embeddings,
+    SPARSE_VECTOR_NAME,
+)
 
 
-def search(query: str, k: int = 4, collection_name: str = COLLECTION_NAME):
-    """Embed the query and return the top-k most similar chunks from Qdrant."""
+def search(
+    query: str,
+    k: int = 4,
+    collection_name: str = COLLECTION_NAME,
+    prefetch_k: int = 20,
+) -> list[tuple]:
+    """Hybrid search: two independent ranking streams (dense + sparse) are
+    fetched in parallel and fused with Reciprocal Rank Fusion (RRF).
+
+    For full pipeline with reranking, use:
+        retriever.Reranker.hybridSearch_with_rerank(query, k=4, rerank_k=20)
+    """
     client = get_client()
-    return client.query_points(
-        collection_name=collection_name,
-        query=embeddings.embed_query(query),
-        limit=k,
-        with_payload=True,
+    sparse_emb = get_sparse_embeddings()
+
+    dense_vec = embeddings.embed_query(query)
+    spar_vec = models.SparseVector(
+        indices=sparse_emb.embed_query(query).indices,
+        values=sparse_emb.embed_query(query).values,
     )
 
+    return client.query_points(
+        collection_name=collection_name,
+        prefetch=[
+            models.Prefetch(
+                using=DENSE_VECTOR_NAME, query=dense_vec, limit=prefetch_k
+            ),
+            models.Prefetch(
+                using=SPARSE_VECTOR_NAME, query=spar_vec, limit=prefetch_k
+            ),
+        ],
+        query=models.FusionQuery(fusion=models.Fusion.RRF),
+        limit=k,
+        with_payload=True,
+    ).points
 
 def main() -> None:
     query = "Sliding Window Attention."
-    result = search(query)
-
-    print(f"Query: {query}\n")
-    for i, point in enumerate(result.points, start=1):
+    results = hybridSearch_with_rerank(query)
+    for i, (point, rerank_score) in enumerate(results, start=1):
         payload = point.payload or {}
         metadata = payload.get("metadata", {})
         content = (payload.get("page_content") or "").strip().replace("\n", " ")
-        print(f"[{i}] score={point.score:.4f}  page={metadata.get('page')}")
+        print(f"[{i}] rerank_score={rerank_score:.4f}  page={metadata.get('page')}")
         print(f"    {content[:200]}...\n")
-
 
 if __name__ == "__main__":
     main()
