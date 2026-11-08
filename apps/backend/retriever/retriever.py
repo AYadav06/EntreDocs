@@ -1,3 +1,4 @@
+from retriever.Reranker import hybridSearch_with_rerank
 from qdrant_client import models
 
 from embedding import embeddings
@@ -18,6 +19,9 @@ def search(
 ) -> list[tuple]:
     """Hybrid search: two independent ranking streams (dense + sparse) are
     fetched in parallel and fused with Reciprocal Rank Fusion (RRF).
+
+    For full pipeline with reranking, use:
+        retriever.Reranker.hybridSearch_with_rerank(query, k=4, rerank_k=20)
     """
     client = get_client()
     sparse_emb = get_sparse_embeddings()
@@ -45,12 +49,12 @@ def search(
 
 def main() -> None:
     query = "Sliding Window Attention."
-    results = search(query, k=4)
-    for i, point in enumerate(results, start=1):
+    results = hybridSearch_with_rerank(query)
+    for i, (point, rerank_score) in enumerate(results, start=1):
         payload = point.payload or {}
         metadata = payload.get("metadata", {})
         content = (payload.get("page_content") or "").strip().replace("\n", " ")
-        print(f"[{i}] score={point.score:.4f}  page={metadata.get('page')}")
+        print(f"[{i}] rerank_score={rerank_score:.4f}  page={metadata.get('page')}")
         print(f"    {content[:200]}...\n")
 
 if __name__ == "__main__":
