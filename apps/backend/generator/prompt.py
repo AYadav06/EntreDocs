@@ -1,7 +1,6 @@
 def build_prompt(query: str, results: list) -> str:
-    """Build the generation prompt from the query and retrieved search results.
-    """
-    
+    """Build the generation prompt from the query and retrieved search results."""
+
     context = "\n\n".join(
         f"[Page {p.payload.get('metadata', {}).get('page')}] {p.payload.get('page_content') or ''}"
         for p in results

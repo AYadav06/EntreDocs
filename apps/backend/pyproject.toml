@@ -25,3 +25,12 @@ dependencies = [
     "ruff>=0.17.4",
     "sentence-transformers>=6.2.0",
 ]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true

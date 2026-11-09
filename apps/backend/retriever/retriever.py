@@ -33,22 +33,19 @@ def search(
     return client.query_points(
         collection_name=collection_name,
         prefetch=[
-            models.Prefetch(
-                using=DENSE_VECTOR_NAME, query=dense_vec, limit=prefetch_k
-            ),
-            models.Prefetch(
-                using=SPARSE_VECTOR_NAME, query=spar_vec, limit=prefetch_k
-            ),
+            models.Prefetch(using=DENSE_VECTOR_NAME, query=dense_vec, limit=prefetch_k),
+            models.Prefetch(using=SPARSE_VECTOR_NAME, query=spar_vec, limit=prefetch_k),
         ],
         query=models.FusionQuery(fusion=models.Fusion.RRF),
         limit=k,
         with_payload=True,
     ).points
 
+
 def main() -> None:
     query = "Sliding Window Attention."
-    results = hybridSearch_with_rerank(query)  #retrieval
-    llm_result = answer(query, [p for p, _ in results])  #generation
+    results = hybridSearch_with_rerank(query)  # retrieval
+    llm_result = answer(query, [p for p, _ in results])  # generation
     for i, (point, rerank_score) in enumerate(results, start=1):
         payload = point.payload or {}
         metadata = payload.get("metadata", {})
@@ -56,5 +53,7 @@ def main() -> None:
         print(f"[{i}] rerank_score={rerank_score:.4f}  page={metadata.get('page')}")
         print(f"    {content[:200]}...\n")
     print(llm_result)
+
+
 if __name__ == "__main__":
     main()

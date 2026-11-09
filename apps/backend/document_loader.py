@@ -9,14 +9,13 @@ from vectorStore.qdrant import init_vector_store
 
 def load_pdf_pages(file_path: str) -> list[Document]:
 
-    reader=pypdf.PdfReader(file_path)
+    reader = pypdf.PdfReader(file_path)
     return [
         Document(
             page_content=page.extract_text() or "",
-            metadata={"source":file_path,"page":i},
-
+            metadata={"source": file_path, "page": i},
         )
-        for i,page in enumerate(reader.pages)
+        for i, page in enumerate(reader.pages)
     ]
 
 
