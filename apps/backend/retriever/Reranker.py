@@ -33,4 +33,4 @@ def hybridSearch_with_rerank(query,k=4,rerank_k=20):
     scores= reranker.predict([(query,d) for d in docs])
 
     ranked= sorted(zip(points,scores),key=lambda x:x[1],reverse=True)
-    return ((p,s) for p, s in ranked[:k])
+    return ranked[:k]
